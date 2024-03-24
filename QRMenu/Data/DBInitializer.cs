@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using QRMenu.Data;
@@ -36,11 +37,11 @@ namespace QRMenuAPI.Data
                 if (context.Companies.Count() == 0)
                 {
                     company = new Company();
-                    company.Address = "adres";
-                    company.EMail = "abc@def.com";
-                    company.Name = "Company";
+                    company.Address = "Bakırköy";
+                    company.EMail = "tabgıda@tabgıda.com";
+                    company.Name = "Tab Gıda";
                     company.Phone = "1112223344";
-                    company.PostalCode = "12345";
+                    company.PostalCode = "34000";
                     company.RegisterDate = DateTime.Today;
                     company.StateId = 1;
                     company.TaxNumber = "11111111111";
@@ -55,6 +56,8 @@ namespace QRMenuAPI.Data
                         roleManager.CreateAsync(identityRole).Wait();
                         identityRole = new IdentityRole("CompanyAdministrator");
                         roleManager.CreateAsync(identityRole).Wait();
+                        identityRole = new IdentityRole("RestaurantAdministrator");
+                        roleManager.CreateAsync (identityRole).Wait();
                     }
                 }
                 if (userManager != null)
@@ -66,7 +69,7 @@ namespace QRMenuAPI.Data
                             applicationUser = new ApplicationUser();
                             applicationUser.UserName = "Administrator";
                             applicationUser.CompanyId = company.Id;
-                            applicationUser.Name = "Administrator";
+                            applicationUser.Name = "Tab Gıda Admin";
                             applicationUser.Email = "abc@def.com";
                             applicationUser.PhoneNumber = "1112223344";
                             applicationUser.RegisterDate = DateTime.Today;

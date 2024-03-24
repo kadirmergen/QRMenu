@@ -49,12 +49,10 @@ namespace QRMenu.Controllers
             {
                 return NotFound();
             }
-
             return applicationUser;
         }
 
         // PUT: api/Companies/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [Authorize(Roles ="CompanyAdministrator")]
         [HttpPut("{id}")]
         public OkResult PutApplicationUser(ApplicationUser applicationUser)
@@ -72,7 +70,6 @@ namespace QRMenu.Controllers
         }
 
         // POST: api/Companies
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [Authorize(Roles = "CompanyAdministrator")]
         [HttpPost]
         public string PostApplicationUser(ApplicationUser applicationUser , string password)
@@ -82,7 +79,7 @@ namespace QRMenu.Controllers
         }
 
         // DELETE: api/Companies/5
-        [Authorize(Roles = "CompanyAdministrator")]
+        [Authorize(Roles = "Administrator, CompanyAdministrator")]
         [HttpDelete("{id}")]
         public ActionResult DeleteApplicationUser(string id)
         {
@@ -135,12 +132,6 @@ namespace QRMenu.Controllers
             IdentityRole identityRole = _roleManager.FindByIdAsync(roleId).Result;
 
             _signInManager.UserManager.AddToRoleAsync(applicationUser, identityRole.Name).Wait();
-        }
-
-
-        private bool CompanyExists(int id)
-        {
-            return (_context.Companies?.Any(e => e.Id == id)).GetValueOrDefault();
         }
     }
 }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -15,7 +16,7 @@ namespace QRMenu.Controllers
     public class CategoriesController : ControllerBase
     {
         private readonly ApplicationContext _context;
-
+        
         public CategoriesController(ApplicationContext context)
         {
             _context = context;
@@ -36,10 +37,10 @@ namespace QRMenu.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<Category>> GetCategory(int id)
         {
-          if (_context.Categories == null)
-          {
-              return NotFound();
-          }
+            if (_context.Categories == null)
+            {
+                return NotFound();
+            }
             var category = await _context.Categories.FindAsync(id);
 
             if (category == null)
@@ -51,74 +52,45 @@ namespace QRMenu.Controllers
         }
 
         // PUT: api/Categories/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
+        [Authorize(Roles = "CompanyAdministrator, RestaurantAdministrator")]
         public async Task<IActionResult> PutCategory(int id, Category category)
         {
             if (id != category.Id)
             {
                 return BadRequest();
             }
-
             _context.Entry(category).State = EntityState.Modified;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!CategoryExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
-
-            return NoContent();
+            await _context.SaveChangesAsync();
+            return Ok("Category updated!");
         }
 
         // POST: api/Categories
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
+        [Authorize(Roles = "CompanyAdministrator")]
         public async Task<ActionResult<Category>> PostCategory(Category category)
         {
-          if (_context.Categories == null)
-          {
-              return Problem("Entity set 'ApplicationContext.Categories'  is null.");
-          }
-            _context.Categories.Add(category);
+            _context.Categories!.Add(category);
             await _context.SaveChangesAsync();
-
-            return CreatedAtAction("GetCategory", new { id = category.Id }, category);
+            return Ok();
         }
 
         // DELETE: api/Categories/5
         [HttpDelete("{id}")]
+        [Authorize(Roles = "CompanyAdministrator, RestaurantAdministrator")]
         public async Task<IActionResult> DeleteCategory(int id)
         {
-            if (_context.Categories == null)
-            {
-                return NotFound();
-            }
-            var category = await _context.Categories.FindAsync(id);
-            if (category == null)
-            {
-                return NotFound();
-            }
+            var category = await _context.Categories!.FindAsync(id);
+            category!.StateId = 0;
+            _context.Categories.Update(category);
 
-            _context.Categories.Remove(category);
+            var foods=_context.Foods.Where(f => f.CategoryId==category.Id);
+            foreach (Food food in foods)
+            {
+                food.StateId = 0;
+            }
             await _context.SaveChangesAsync();
-
-            return NoContent();
-        }
-
-        private bool CategoryExists(int id)
-        {
-            return (_context.Categories?.Any(e => e.Id == id)).GetValueOrDefault();
+            return Ok("Category has been deleted.");
         }
     }
 }

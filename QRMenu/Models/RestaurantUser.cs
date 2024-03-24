@@ -12,6 +12,6 @@ namespace QRMenu.Models
         [ForeignKey("UserId")]
         public ApplicationUser? ApplicationUser { get; set; }
 
-        //User Id=SA;Password=reallyStrongPwd123
+        
     }
 }

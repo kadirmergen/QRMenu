@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using QRMenu.Data;
@@ -16,10 +18,12 @@ namespace QRMenu.Controllers
     public class RestaurantsController : ControllerBase
     {
         private readonly ApplicationContext _context;
+        private readonly UserManager<ApplicationUser> _userManager;
 
-        public RestaurantsController(ApplicationContext context)
+        public RestaurantsController(ApplicationContext context, UserManager<ApplicationUser> userManager)
         {
             _context = context;
+            _userManager = userManager;
         }
 
         // GET: api/Restaurants
@@ -36,6 +40,7 @@ namespace QRMenu.Controllers
 
         // GET: api/Restaurants/5
         [HttpGet("{id}")]
+        [Authorize(Roles = "Administrator, CompanyAdministrator")]
         public async Task<ActionResult<Restaurant>> GetRestaurant(int id)
         {
             if (_context.Restaurants == null)
@@ -44,89 +49,83 @@ namespace QRMenu.Controllers
             }
             var restaurant = await _context.Restaurants.FindAsync(id);
 
-            if (restaurant == null)
+            if (restaurant != null)
             {
-                return NotFound();
+                return restaurant; 
             }
-
-            return restaurant;
+            return NotFound();
         }
 
         // PUT: api/Restaurants/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
+        [Authorize(Roles = "CompanyAdministrator, RestaurantAdministrator")]
         public async Task<IActionResult> PutRestaurant(int id, Restaurant restaurant)
         {
-            if (id != restaurant.Id)
+            if (User.HasClaim("Restaurant",id.ToString()) || User.IsInRole("CompanyAdministrator"))
             {
-                return BadRequest();
-            }
-
-            _context.Entry(restaurant).State = EntityState.Modified;
-
-            try
-            {
+                _context.Entry(restaurant).State = EntityState.Modified;
                 await _context.SaveChangesAsync();
             }
-            catch (DbUpdateConcurrencyException)
+            if (id != restaurant.Id)
             {
-                if (!RestaurantExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
+                return BadRequest("There isnt any restaurant with that id");
             }
-
-            return NoContent();
+            return Ok("Restaurant updated.");
         }
 
         // POST: api/Restaurants
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [Authorize(Roles = "CompanyAdministrator")]
         [HttpPost]
-        public async Task<ActionResult<Restaurant>> PostRestaurant(Restaurant restaurant)
+        [Authorize(Roles = "CompanyAdministrator")]
+        public async Task<ActionResult<Restaurant>> PostRestaurant(Restaurant restaurant,string userName, string password)
         {
-            if (User.HasClaim("CompanyId", restaurant.CompanyId.ToString())==true)
-            {
-                ////////////////
-            }
-
-            if (_context.Restaurants == null)
-            {
-                return Problem("Entity set 'ApplicationContext.Restaurants'  is null.");
-            }
+            ApplicationUser applicationUser = new ApplicationUser();
+            Claim claim;
+            
             _context.Restaurants.Add(restaurant);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetRestaurant", new { id = restaurant.Id }, restaurant);
+            applicationUser.Name = restaurant.BranchName;
+            applicationUser.PhoneNumber = restaurant.PhoneNumber;
+            applicationUser.CompanyId = restaurant.CompanyId;
+            applicationUser.StateId = 1;
+            applicationUser.UserName = userName;
+
+            var result = _userManager.CreateAsync(applicationUser, password).Result;
+            
+            claim = new Claim("Restaurant", restaurant.Id.ToString());
+
+            _userManager.AddClaimAsync(applicationUser, claim).Wait();
+
+            _userManager.AddToRoleAsync(applicationUser, "RestaurantAdministrator").Wait();
+
+            return Ok("Restaurant added.");
         }
 
         // DELETE: api/Restaurants/5
         [HttpDelete("{id}")]
+        [Authorize(Roles = "CompanyAdministrator")]
         public async Task<IActionResult> DeleteRestaurant(int id)
         {
-            if (_context.Restaurants == null)
-            {
-                return NotFound();
-            }
-            var restaurant = await _context.Restaurants.FindAsync(id);
-            if (restaurant == null)
-            {
-                return NotFound();
-            }
+            var restaurant = await _context.Restaurants!.FindAsync(id);
+            restaurant!.StateId = 0;
+            _context.Restaurants.Update(restaurant);
 
-            _context.Restaurants.Remove(restaurant);
+            var categories = _context.Categories.Where(c => c.RestaurantId == restaurant.Id);
+            foreach (Category category in categories)
+            {
+                category.StateId = 0;
+                _context.Categories.Update(category);
+
+                var foods = _context.Foods.Where(f => f.CategoryId == category.Id);
+                foreach (Food food in foods)
+                {
+                    food.StateId = 0;
+                    _context.Foods.Update(food);
+                }
+            }
             await _context.SaveChangesAsync();
 
-            return NoContent();
-        }
-
-        private bool RestaurantExists(int id)
-        {
-            return (_context.Restaurants?.Any(e => e.Id == id)).GetValueOrDefault();
+            return Content("Restaurant has been deleted.");
         }
     }
 }

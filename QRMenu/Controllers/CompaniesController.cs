@@ -18,9 +18,7 @@ namespace QRMenu.Controllers
     public class CompaniesController : ControllerBase
     {
         private readonly ApplicationContext _context;
-
         private readonly UserManager<ApplicationUser> _userManager;
-
         public CompaniesController(ApplicationContext context, UserManager<ApplicationUser> userManager)
         {
             _context = context;
@@ -28,8 +26,8 @@ namespace QRMenu.Controllers
         }
 
         // GET: api/Companies
-        [Authorize(Roles = "Administrator,CompanyAdministrator")]
         [HttpGet]
+        [Authorize(Roles = "Administrator,CompanyAdministrator")]
         public async Task<ActionResult<IEnumerable<Company>>> GetCompanies()
         {
           if (_context.Companies == null)
@@ -41,10 +39,10 @@ namespace QRMenu.Controllers
 
         // GET: api/Companies/5
         [HttpGet("{id}")]
-        [Authorize(Roles = "CompanyAdministrator")]
+        [Authorize(Roles = "Administrator, CompanyAdministrator")]
         public ActionResult<Company> GetCompany(int id)
         {
-            if (User.HasClaim("CompanyId",id.ToString())==true)
+            if (User.HasClaim("CompanyId",id.ToString())==true || User.IsInRole("Administrator"))
             {
                 if (_context.Companies == null)
                 {
@@ -64,31 +62,28 @@ namespace QRMenu.Controllers
         }
 
         // PUT: api/Companies/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [Authorize(Roles = "Administrator, CompanyAdministrator")]
         [HttpPut("{id}")]
+        [Authorize(Roles = "Administrator, CompanyAdministrator")]
         public async Task<IActionResult> PutCompany(int id, Company company)
         {
-            if (User.HasClaim("CompanyId",id.ToString()) == true || User.IsInRole("Administrator"))
+            if (User.HasClaim("CompanyId", id.ToString()) == true || User.IsInRole("Administrator"))
             {
                 _context.Entry(company).State = EntityState.Modified;
                 await _context.SaveChangesAsync();
                 return NoContent();
             }
-           
-            
             return StatusCode(404, "Belirtilen şirket bulunamadı veya erişim izniniz yok.");
-
         }
 
         // POST: api/Companies
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [Authorize(Roles = "Administrator")]
         [HttpPost]
-        public ActionResult PostCompany(Company company, string password)
+        [Authorize(Roles = "Administrator")]
+        public ActionResult PostCompany(Company company, string userName, string password)
         {
-            //string res = User.FindFirstValue(ClaimTypes.NameIdentifier);
-
+            if (User.IsInRole("Administrator")==false)
+            {
+                return Unauthorized();
+            }
             ApplicationUser applicationUser = new ApplicationUser();
             Claim claim;
 
@@ -97,13 +92,13 @@ namespace QRMenu.Controllers
 
             applicationUser.CompanyId = company.Id;
             applicationUser.Email = company.EMail;
-            applicationUser.Name = "Yeni";
+            applicationUser.Name = company.Name;
             applicationUser.PhoneNumber = company.Phone;
-            applicationUser.RegisterDate = DateTime.Today;
+            applicationUser.RegisterDate = DateTime.Now;
             applicationUser.StateId = 1;
-            applicationUser.UserName = "Administrator" + company.Id.ToString();
+            applicationUser.UserName = userName;
 
-            var result = _userManager.CreateAsync(applicationUser, password).Result;
+            _userManager.CreateAsync(applicationUser, password).Wait();
 
             claim = new Claim("CompanyId", company.Id.ToString());
 
@@ -112,32 +107,45 @@ namespace QRMenu.Controllers
             _userManager.AddToRoleAsync(applicationUser, "CompanyAdministrator").Wait();
 
             return Ok();
-
-
         }
 
         // DELETE: api/Companies/5
-        [Authorize(Roles = "Administrator,CompanyAdministrator")]
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Administrator,CompanyAdministrator")]
         public async Task<IActionResult> DeleteCompany(int id)
         {
             if (User.HasClaim("CompanyId",id.ToString()) || User.IsInRole("Administrator"))
             {
                 var company = _context.Companies!.FindAsync(id).Result;
-                company.StateId = 0;
+                company!.StateId = 0;
                 _context.Companies.Update(company);
+                var restaurants = _context.Restaurants.Where(r => r.CompanyId == id);
+                foreach (Restaurant restaurant in restaurants)
+                {
+                    restaurant.StateId = 0;
+                    _context.Restaurants.Update(restaurant);
+
+                    var categories = _context.Categories.Where(c => c.RestaurantId==restaurant.Id);
+                    foreach (Category category in categories)
+                    {
+                        category.StateId = 0;
+                        _context.Categories.Update(category);
+
+                        var foods = _context.Foods.Where(f => f.CategoryId == category.Id);
+                        foreach(Food food in foods)
+                        {
+                            food.StateId = 0;
+                            _context.Foods.Update(food);
+                        }
+                    }
+                }
                 await _context.SaveChangesAsync();
 
-                return NoContent();
+                return Content("Company and the all layer related with company has been deleted.");
             }
-            return StatusCode(404, "company bulunamadı.");
-
-
+            return NotFound();
         }
 
-        private bool CompanyExists(int id)
-        {
-            return (_context.Companies?.Any(e => e.Id == id)).GetValueOrDefault();
-        }
+        
     }
 }

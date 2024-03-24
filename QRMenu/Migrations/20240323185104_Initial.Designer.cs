@@ -12,7 +12,7 @@ using QRMenu.Data;
 namespace QRMenu.Migrations
 {
     [DbContext(typeof(ApplicationContext))]
-    [Migration("20240321074449_Initial")]
+    [Migration("20240323185104_Initial")]
     partial class Initial
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -374,13 +374,13 @@ namespace QRMenu.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
-                    b.Property<int>("CompanyId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Name")
+                    b.Property<string>("BranchName")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("CompanyId")
+                        .HasColumnType("int");
 
                     b.Property<string>("PhoneNumber")
                         .IsRequired()

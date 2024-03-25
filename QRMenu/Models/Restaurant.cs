@@ -9,7 +9,7 @@ namespace QRMenu.Models
 
         [StringLength(100,MinimumLength =2)]
         [Column(TypeName = "nvarchar(100)")]
-        public string BranchName { get; set; } = "";
+        public string Name { get; set; } = "";
 
         [Phone]
         [Column(TypeName = "varchar(30)")]

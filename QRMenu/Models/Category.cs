@@ -11,6 +11,8 @@ namespace QRMenu.Models
         [Column(TypeName = "nvarchar(100)")]
         public string Name { get; set; } = "";
 
+        public string? Image { get; set; } = ""; 
+
         public int RestaurantId { get; set; }
         [ForeignKey("RestaurantId")]
         public Restaurant? Restaurant { get; set; }

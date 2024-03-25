@@ -14,6 +14,7 @@ namespace QRMenu.Models
         [StringLength(200)]
         [Column(TypeName = "nvarchar(200)")]
         public string? Description { get; set; }
+        public string? Image { get; set; } = "";
 
         [Column(TypeName ="real")]
         [Range(0,float.MaxValue)]

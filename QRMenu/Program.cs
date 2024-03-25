@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using QRMenu.Data;
 using QRMenu.Models;
 using QRMenuAPI.Data;
@@ -23,11 +24,12 @@ namespace QRMenu
             builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
                     .AddEntityFrameworkStores<ApplicationContext>().AddDefaultTokenProviders();
             builder.Services.AddAuthentication();
-            builder.Services.AddAuthorization(options =>
-          options.AddPolicy("CompAdmin",
-          policy => policy.RequireClaim("CompanyId")));
+            builder.Services.AddAuthorization();
+            //options =>
+            //options.AddPolicy("CompAdmin",
+            //policy => policy.RequireClaim("CompanyId"))
 
-            
+
 
             var app = builder.Build();
 

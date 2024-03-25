@@ -57,8 +57,7 @@ namespace QRMenu.Controllers
 
                 return company;
             }
-            return NotFound();
-          
+            return NotFound();         
         }
 
         // PUT: api/Companies/5
@@ -68,8 +67,8 @@ namespace QRMenu.Controllers
         {
             if (User.HasClaim("CompanyId", id.ToString()) == true || User.IsInRole("Administrator"))
             {
-                _context.Entry(company).State = EntityState.Modified;
-                await _context.SaveChangesAsync();
+                _context.Companies.Update(company);
+                _context.SaveChanges();
                 return NoContent();
             }
             return StatusCode(404, "Belirtilen şirket bulunamadı veya erişim izniniz yok.");
@@ -145,7 +144,5 @@ namespace QRMenu.Controllers
             }
             return NotFound();
         }
-
-        
     }
 }

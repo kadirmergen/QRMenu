@@ -64,7 +64,7 @@ namespace QRMenu.Controllers
             existApplicationUser.UserName = applicationUser.UserName;
             existApplicationUser.PhoneNumber = applicationUser.PhoneNumber;
             existApplicationUser.StateId = applicationUser.StateId;
-
+            
             _signInManager.UserManager.UpdateAsync(existApplicationUser);
             return Ok();
         }
@@ -124,7 +124,7 @@ namespace QRMenu.Controllers
             _signInManager.UserManager.AddPasswordAsync(applicationUser, password);
         }
 
-        [Authorize(Roles ="CompanyAdministrator")]
+        /*[Authorize(Roles ="CompanyAdministrator")]
         [HttpPost("AssignRole")]
         public void AssignRole(string userId, string roleId)
         {
@@ -132,6 +132,6 @@ namespace QRMenu.Controllers
             IdentityRole identityRole = _roleManager.FindByIdAsync(roleId).Result;
 
             _signInManager.UserManager.AddToRoleAsync(applicationUser, identityRole.Name).Wait();
-        }
+        }*/
     }
 }

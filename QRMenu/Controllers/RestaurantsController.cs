@@ -61,7 +61,7 @@ namespace QRMenu.Controllers
         [Authorize(Roles = "CompanyAdministrator, RestaurantAdministrator")]
         public async Task<IActionResult> PutRestaurant(int id, Restaurant restaurant)
         {
-            if (User.HasClaim("Restaurant",id.ToString()) || User.IsInRole("CompanyAdministrator"))
+            if (User.HasClaim("RestaurantId",id.ToString()) || User.IsInRole("CompanyAdministrator"))
             {
                 _context.Entry(restaurant).State = EntityState.Modified;
                 await _context.SaveChangesAsync();
@@ -84,7 +84,7 @@ namespace QRMenu.Controllers
             _context.Restaurants.Add(restaurant);
             await _context.SaveChangesAsync();
 
-            applicationUser.Name = restaurant.BranchName;
+            applicationUser.Name = restaurant.Name;
             applicationUser.PhoneNumber = restaurant.PhoneNumber;
             applicationUser.CompanyId = restaurant.CompanyId;
             applicationUser.StateId = 1;
@@ -92,7 +92,7 @@ namespace QRMenu.Controllers
 
             var result = _userManager.CreateAsync(applicationUser, password).Result;
             
-            claim = new Claim("Restaurant", restaurant.Id.ToString());
+            claim = new Claim("RestaurantId", restaurant.Id.ToString());
 
             _userManager.AddClaimAsync(applicationUser, claim).Wait();
 
@@ -106,26 +106,29 @@ namespace QRMenu.Controllers
         [Authorize(Roles = "CompanyAdministrator")]
         public async Task<IActionResult> DeleteRestaurant(int id)
         {
-            var restaurant = await _context.Restaurants!.FindAsync(id);
-            restaurant!.StateId = 0;
-            _context.Restaurants.Update(restaurant);
-
-            var categories = _context.Categories.Where(c => c.RestaurantId == restaurant.Id);
-            foreach (Category category in categories)
+            if (User.HasClaim("CompanyId",id.ToString()))
             {
-                category.StateId = 0;
-                _context.Categories.Update(category);
+                var restaurant = await _context.Restaurants!.FindAsync(id);
+                restaurant!.StateId = 0;
+                _context.Restaurants.Update(restaurant);
 
-                var foods = _context.Foods.Where(f => f.CategoryId == category.Id);
-                foreach (Food food in foods)
+                var categories = _context.Categories.Where(c => c.RestaurantId == restaurant.Id);
+                foreach (Category category in categories)
                 {
-                    food.StateId = 0;
-                    _context.Foods.Update(food);
+                    category.StateId = 0;
+                    _context.Categories.Update(category);
+
+                    var foods = _context.Foods.Where(f => f.CategoryId == category.Id);
+                    foreach (Food food in foods)
+                    {
+                        food.StateId = 0;
+                        _context.Foods.Update(food);
+                    }
                 }
             }
             await _context.SaveChangesAsync();
-
             return Content("Restaurant has been deleted.");
+
         }
     }
 }
